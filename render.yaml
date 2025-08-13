@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: planner-service
+    name: timetable-service
     env: docker
     plan: free
     dockerfilePath: ./Dockerfile
@@ -8,3 +8,4 @@ services:
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
+
