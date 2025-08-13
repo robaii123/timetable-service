@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<solver>
+    <!-- Fully qualified class names of your solution and planning entity -->
+    <solutionClass>com.example.timetable_service.domain.WeeklySchedule</solutionClass>
+    <entityClass>com.example.timetable_service.domain.Session</entityClass>
+
+    <scoreDirectorFactory>
+        <constraintProviderClass>
+            com.example.timetable_service.domain.ELSConstraintProvider
+        </constraintProviderClass>
+    </scoreDirectorFactory>
+
+    <termination>
+        <!-- Maximum solve time -->
+        <spentLimit>10s</spentLimit>
+    </termination>
+</solver>
