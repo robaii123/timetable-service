@@ -1,0 +1,30 @@
+# Maven/Java
+target/
+*.class
+*.log
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+
+# Env & local configs
+.env
+.env.*
+.env.properties
+*.local
+*.secret
+
+
+rag-service-*.jar
+
+data/
+uploads/
+
+.env.properties
+.env
+.env.*
