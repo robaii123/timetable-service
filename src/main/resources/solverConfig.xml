@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<solver>
+    <solutionClass>com.example.timetable_service.domain.WeeklySchedule</solutionClass>
+    <entityClass>com.example.timetable_service.domain.Session</entityClass>
+
+    <scoreDirectorFactory>
+        <constraintProviderClass>
+            com.example.timetable_service.domain.ELSConstraintProvider
+        </constraintProviderClass>
+    </scoreDirectorFactory>
+
+    <termination>
+        <spentLimit>10s</spentLimit>
+    </termination>
+</solver>

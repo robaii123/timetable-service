@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8" />
+    <title>Timetable Planner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+    <style>
+        :root {
+            --bg:#0b0c10;--fg:#eaf0f6;--muted:#9aa4b2;--card:#141721;--line:#222738;--accent:#6366f1;--accent-2:#22c55e;--danger:#ef4444;--warn:#f59e0b;
+            --chip:#1f2430;
+        }
+        [data-theme="light"] {
+            --bg:#f7f8fb;--fg:#0e1116;--muted:#5b6470;--card:#ffffff;--line:#e6e8ee;--accent:#4f46e5;--accent-2:#16a34a;--danger:#dc2626;--warn:#d97706;
+            --chip:#f2f4f9;
+        }
+        * { box-sizing:border-box }
+        body { margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial }
+        header { position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);z-index:10 }
+        .wrap { max-width:1200px;margin:0 auto;padding:18px }
+        h1 { margin:0;font-size:22px }
+        .toolbar { display:flex;gap:10px;align-items:center;margin-top:8px }
+        .btn { padding:10px 14px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:12px;cursor:pointer;transition:transform .05s ease }
+        .btn:hover { transform:translateY(-1px) }
+        .btn.primary { background:var(--accent);color:#fff;border-color:var(--accent) }
+        .btn.success { background:var(--accent-2);color:#fff;border-color:var(--accent-2) }
+        .btn.danger { background:var(--danger);color:#fff;border-color:var(--danger) }
+        .btn.ghost { background:transparent }
+        .btn:disabled { opacity:.5;cursor:not-allowed }
+        .tabs { display:flex;gap:8px;margin:14px 0;flex-wrap:wrap }
+        .tab { padding:8px 12px;border:1px solid var(--line);border-bottom:2px solid transparent;border-radius:10px;cursor:pointer;background:var(--card) }
+        .tab.active { border-color:var(--accent);border-bottom-color:var(--accent);color:var(--accent);font-weight:600 }
+        .grid { display:grid;grid-template-columns:1fr;gap:16px }
+        @media (min-width: 1000px) { .grid { grid-template-columns:420px 1fr } }
+        .card { background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px }
+        .muted { color:var(--muted) }
+        .row { display:flex;gap:10px;flex-wrap:wrap;align-items:center }
+        .pill { border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:var(--chip) }
+        .status.ok { color:var(--accent-2) }
+        .status.bad { color:var(--danger) }
+        .status.muted { color:var(--muted) }
+        input,select { width:100%;padding:10px;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:10px }
+        table { width:100%;border-collapse:separate;border-spacing:0 8px;margin-top:8px;table-layout:auto }
+        th { font-weight:600;color:var(--muted);padding:0 6px 4px }
+        td { background:var(--chip);border:1px solid var(--line);padding:8px;border-radius:10px;overflow:visible }
+        .mini { padding:8px 10px;font-size:12px }
+        .right { margin-left:auto }
+        .toast { position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:10px;z-index:50 }
+        .toast .item { background:var(--card);border:1px solid var(--line);padding:10px 12px;border-radius:10px;box-shadow:0 10px 24px rgba(0,0,0,.18) }
+        .mono { font-family:ui-monospace,Menlo,Consolas,monospace }
+        .switch { display:flex;align-items:center;gap:8px }
+        .hint { font-size:12px;color:var(--muted) }
+        .badge { background:var(--chip);border:1px solid var(--line);padding:3px 8px;border-radius:999px }
+
+        input[type="time"] {
+            min-width: 120px;
+            text-align: center;
+            letter-spacing: 0;
+        }
+        input[type="time"]::-webkit-datetime-edit-fields-wrapper { padding: 0; }
+        input[type="time"]::-webkit-datetime-edit-hour-field,
+        input[type="time"]::-webkit-datetime-edit-minute-field,
+        input[type="time"]::-webkit-datetime-edit-second-field,
+        input[type="time"]::-webkit-datetime-edit-ampm-field { padding: 0 2px; }
+        input[type="time"]::-webkit-datetime-edit-text { padding: 0 1px; }
+        @-moz-document url-prefix() {
+            input[type="time"] { text-align: center; }
+        }
+
+        input[type="date"] {
+            min-width: 170px;
+            text-align: center;
+        }
+
+        #tbl-timeslots  input[data-k="id"],
+        #tbl-facilities input[data-k="capacity"],
+        #tbl-courses    input[data-k="weeklySessions"],
+        #tbl-courses    input[data-k="duration"],
+        #tbl-studentGroups input[data-k="size"],
+        #tbl-sessions   input[data-k="id"],
+        #tbl-sessions   input[data-k="courseId"],
+        #tbl-sessions   input[data-k="instructorId"],
+        #tbl-sessions   input[data-k="studentGroupId"] {
+            min-width: 86px;
+            text-align: center;
+            padding-inline: 8px;
+        }
+
+        input, select {
+            white-space: nowrap;
+            overflow-x: auto;
+            text-overflow: clip;
+        }
+
+        #tbl-facilities    input[data-k="name"],
+        #tbl-courses       input[data-k="name"],
+        #tbl-instructors   input[data-k="name"],
+        #tbl-studentGroups input[data-k="name"],
+        #tbl-facilities    input[data-k="type"],
+        #tbl-courses       input[data-k="requiredFacilityType"] {
+            min-width: 280px;
+        }
+
+        {
+            background-color: #c4d79b !important;
+            border-color: #c4d79b !important;
+            color: #1f2937 !important;
+        }
+
+    </style>
+    <style>
+
+        @media (min-width: 1000px) {
+            .grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+
+        #panel-data,
+        #panel-calendar,
+        #panel-results,
+        #panel-request {
+            grid-column: 1 / -1 !important;
+        }
+
+
+        input[type="text"],
+        input[type="number"],
+        input[type="date"],
+        input[type="time"],
+        select {
+            width: 100%;
+            padding: 10px 14px;
+            font-size: 14px;
+            border: 1px solid var(--line);
+            background: var(--chip);
+            color: var(--fg);
+            border-radius: 10px;
+            box-sizing: border-box;
+        }
+
+        .btn.danger {
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        table {
+            border-spacing: 0 6px;
+        }
+
+        td {
+            vertical-align: middle;
+        }
+    </style>
+
+
+</head>
+<body>
+<header>
+    <div class="wrap">
+        <div class="row">
+            <h1>Timetable Planner</h1>
+            <span class="pill mono" id="appStatus">Idle</span>
+            <div class="right switch">
+                <input type="checkbox" id="themeToggle" />
+                <label for="themeToggle" class="muted">Dark mode</label>
+            </div>
+        </div>
+        <div class="toolbar">
+            <button class="btn" id="seedBtn">Seed demo</button>
+            <button class="btn" id="importBtn">Import JSON</button>
+            <input type="file" id="fileInput" accept="application/json" hidden>
+            <button class="btn" id="exportBtn">Export JSON</button>
+            <button class="btn primary" id="solveBtn">Solve</button>
+            <button class="btn danger" id="stopBtn" disabled>Terminate</button>
+            <div class="right muted">Score: <span id="score" class="mono">—</span></div>
+        </div>
+        <div class="tabs">
+            <div class="tab active" data-tab="data">Data</div>
+            <div class="tab" data-tab="calendar">Calendar</div>
+            <div class="tab" data-tab="results">Results</div>
+            <div class="tab" data-tab="request">Request</div>
+        </div>
+    </div>
+</header>
+
+<main class="wrap grid">
+    <section class="card" id="panel-data">
+        <h3>Input Data</h3>
+        <p class="muted">Timeslots now support an exact <b>date</b> (YYYY-MM-DD). We auto-fill <span class="badge">dayOfWeek</span> from the date.</p>
+
+        <details open class="card" style="padding:10px;margin-top:10px">
+            <summary><b>Timeslots</b> <span class="hint">(Id, Date, Start, End)</span></summary>
+            <div id="tbl-timeslots"></div>
+            <button class="btn mini" onclick="addRow('timeslots')">+ Add timeslot</button>
+        </details>
+
+        <details class="card" style="padding:10px;margin-top:10px">
+            <summary><b>Facilities</b></summary>
+            <div id="tbl-facilities"></div>
+            <button class="btn mini" onclick="addRow('facilities')">+ Add facility</button>
+        </details>
+
+        <details class="card" style="padding:10px;margin-top:10px">
+            <summary><b>Courses</b></summary>
+            <div id="tbl-courses"></div>
+            <button class="btn mini" onclick="addRow('courses')">+ Add course</button>
+        </details>
+
+        <details class="card" style="padding:10px;margin-top:10px">
+            <summary><b>Instructors</b></summary>
+            <div id="tbl-instructors"></div>
+            <button class="btn mini" onclick="addRow('instructors')">+ Add instructor</button>
+        </details>
+
+        <details class="card" style="padding:10px;margin-top:10px">
+            <summary><b>Student Groups</b></summary>
+            <div id="tbl-studentGroups"></div>
+            <button class="btn mini" onclick="addRow('studentGroups')">+ Add group</button>
+        </details>
+
+        <details class="card" style="padding:10px;margin-top:10px">
+            <summary><b>Sessions to schedule</b> <span class="hint">(Id, CourseId, InstructorId, GroupId)</span></summary>
+            <div id="tbl-sessions"></div>
+            <button class="btn mini" onclick="addRow('sessions')">+ Add session</button>
+        </details>
+    </section>
+
+    <!-- Right: calendar -->
+    <section class="card" id="panel-calendar" hidden>
+        <div class="row">
+            <h3>Calendar</h3>
+            <span class="muted">Events use the exact date from Timeslots.</span>
+        </div>
+        <div id="calendar" style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px"></div>
+    </section>
+
+    <!-- Right: results -->
+    <section class="card" id="panel-results" hidden>
+        <h3>Results</h3>
+        <div id="resultsTable"></div>
+    </section>
+
+    <!-- Right: request -->
+    <section class="card" id="panel-request" hidden>
+        <h3>Request preview</h3>
+        <pre id="reqPreview" class="mono" style="white-space:pre-wrap"></pre>
+    </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+    // Theme
+    document.getElementById('themeToggle').addEventListener('change', e=>{
+        document.documentElement.setAttribute('data-theme', e.target.checked ? 'dark':'light');
+        calendar?.render();
+    });
+
+    // State, now Timeslot has "date" (YYYY-MM-DD) in UI
+    const state = { timeslots: [], facilities: [], courses: [], instructors: [], studentGroups: [], sessions: [] };
+    let currentJobId=null, pollTimer=null, calendar=null, lastResultSessions=[];
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(t=>{
+        t.addEventListener('click',()=>{
+            document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+            t.classList.add('active'); show(t.dataset.tab);
+        });
+    });
+    function show(name){
+        document.getElementById('panel-data').hidden = name!=='data';
+        document.getElementById('panel-calendar').hidden = name!=='calendar';
+        document.getElementById('panel-results').hidden = name!=='results';
+        document.getElementById('panel-request').hidden = name!=='request';
+        if(name==='calendar') drawCalendar(lastResultSessions);
+        if(name==='results') renderResultsTable(lastResultSessions);
+        if(name==='request') document.getElementById('reqPreview').textContent = JSON.stringify(buildRequest(), null, 2);
+    }
+
+    // Toasts
+    function toast(msg, type='info'){
+        const el=document.createElement('div'); el.className='item'; el.textContent=msg;
+        if(type==='ok') el.style.borderColor='var(--accent-2)'; if(type==='err') el.style.borderColor='var(--danger)'; if(type==='warn') el.style.borderColor='var(--warn)';
+        const box=document.getElementById('toast'); box.appendChild(el); setTimeout(()=>el.remove(),3500);
+    }
+
+    // Tables (Timeslot includes "date" input)
+    function renderTables(){
+        table('tbl-timeslots', state.timeslots, [
+            ['id','Id','number'], ['date','Date','date'], ['startTime','Start','time'], ['endTime','End','time']
+        ]);
+        table('tbl-facilities', state.facilities, [
+            ['id','Id','number'], ['name','Name','text'], ['capacity','Capacity','number'], ['type','Type','text']
+        ]);
+        table('tbl-courses', state.courses, [
+            ['id','Id','number'], ['name','Name','text'], ['weeklySessions','Weekly','number'], ['duration','Duration','number'], ['requiredFacilityType','Req. Type','text']
+        ]);
+        table('tbl-instructors', state.instructors, [
+            ['id','Id','number'], ['name','Name','text'], ['skill','Skill','text']
+        ]);
+        table('tbl-studentGroups', state.studentGroups, [
+            ['id','Id','number'], ['name','Name','text'], ['size','Size','number']
+        ]);
+        table('tbl-sessions', state.sessions, [
+            ['id','Id','number'], ['courseId','CourseId','number'], ['instructorId','InstructorId','number'], ['studentGroupId','GroupId','number']
+        ]);
+    }
+    function table(containerId, rows, cols){
+        const el=document.getElementById(containerId);
+        const thead='<tr>'+cols.map(c=>`<th>${c[1]}</th>`).join('')+'<th></th></tr>';
+        const body=rows.map((r,i)=>'<tr>'+cols.map(([k,_,type])=>`
+        <td><input type="${type}" data-c="${containerId}" data-i="${i}" data-k="${k}" value="${escape(r[k]??'')}"/></td>`).join('')+
+            `<td><button class="btn mini danger" onclick="delRow('${containerId}',${i})">Delete</button></td></tr>`).join('');
+        el.innerHTML=`<table><thead>${thead}</thead><tbody>${body||''}</tbody></table>`;
+        el.querySelectorAll('input').forEach(inp=>{
+            inp.addEventListener('input',e=>{
+                const {c,i,k}=e.target.dataset; const arr=stateKey(c);
+                arr[+i][k]= coerce(e.target.value,k);
+            });
+        });
+    }
+    function stateKey(id){ return ({'tbl-timeslots':state.timeslots,'tbl-facilities':state.facilities,'tbl-courses':state.courses,'tbl-instructors':state.instructors,'tbl-studentGroups':state.studentGroups,'tbl-sessions':state.sessions})[id]; }
+    function addRow(kind){
+        const add={
+            timeslots:()=>state.timeslots.push({id:nextId(state.timeslots),date:todayISO(),startTime:'08:00',endTime:'10:00'}),
+            facilities:()=>state.facilities.push({id:nextId(state.facilities),name:'Room',capacity:30,type:'CLASSROOM'}),
+            courses:()=>state.courses.push({id:nextId(state.courses),name:'Course',weeklySessions:1,duration:60,requiredFacilityType:'CLASSROOM'}),
+            instructors:()=>state.instructors.push({id:nextId(state.instructors),name:'Instructor',skill:'General'}),
+            studentGroups:()=>state.studentGroups.push({id:nextId(state.studentGroups),name:'Group',size:20}),
+            sessions:()=>state.sessions.push({id:nextId(state.sessions),courseId:firstId(state.courses),instructorId:firstId(state.instructors),studentGroupId:firstId(state.studentGroups)})
+        }; add[kind](); renderTables();
+    }
+    function delRow(containerId,i){ stateKey(containerId).splice(i,1); renderTables(); }
+    function nextId(arr){ return (arr.reduce((m,x)=>Math.max(m,Number(x.id)||0),0)+1)||1; }
+    function firstId(arr){ return arr[0]?.id ?? 1; }
+    function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
+    function coerce(v,k){ return ['id','capacity','weeklySessions','duration','size','courseId','instructorId','studentGroupId'].includes(k)?Number(v):v; }
+    function escape(s){return String(s).replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));}
+
+    // Import/Export
+    document.getElementById('importBtn').onclick=()=>document.getElementById('fileInput').click();
+    document.getElementById('fileInput').addEventListener('change', async e=>{
+        const f=e.target.files?.[0]; if(!f) return;
+        try{
+            const json=JSON.parse(await f.text());
+            state.timeslots=(json.timeslots||[]).map(t=>({ id:t.id, date:t.date||guessDateFromDay(t.dayOfWeek), startTime:t.startTime, endTime:t.endTime }));
+            state.facilities=json.facilities||[]; state.courses=json.courses||[]; state.instructors=json.instructors||[]; state.studentGroups=json.studentGroups||[];
+            state.sessions=(json.sessions||[]).map(s=>({ id:s.id, courseId:s.course?.id ?? s.courseId, instructorId:s.instructor?.id ?? s.instructorId, studentGroupId:s.studentGroup?.id ?? s.studentGroupId }));
+            renderTables(); show('data'); toast('Imported JSON','ok');
+        }catch{ toast('Invalid JSON','err'); }
+    });
+    document.getElementById('exportBtn').onclick=()=>{
+        const blob=new Blob([JSON.stringify(buildRequest(true),null,2)],{type:'application/json'});
+        const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='TimetableRequest.json'; a.click(); URL.revokeObjectURL(a.href);
+    };
+
+    // Build request. We keep "date" only on the client; the request sends dayOfWeek.
+    function buildRequest(includeDate=false){
+        const dayName=d=>['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'][new Date(d).getDay()];
+        const timeslotDTOs = state.timeslots.map(t=>({
+            id:+t.id,
+            ...(includeDate?{date:t.date}:{}),                // export keeps date for your files
+            dayOfWeek: dayName(t.date),
+            startTime: t.startTime,
+            endTime: t.endTime
+        }));
+        const idx = byId(timeslotDTOs); // id -> dto (to recover date later when rendering)
+        clientTimeslotIndex = Object.fromEntries(Object.entries(idx).map(([k,v])=>[k, v.date || null]));
+
+        const C=byId(state.courses), I=byId(state.instructors), G=byId(state.studentGroups);
+        const sessions = state.sessions.map(s=>({
+            id:+s.id,
+            course: toCourse(C[+s.courseId]||{}),
+            instructor: toInstructor(I[+s.instructorId]||{}),
+            studentGroup: toGroup(G[+s.studentGroupId]||{}),
+            timeslot:null, facility:null
+        }));
+        return {
+            timeslots: timeslotDTOs,
+            facilities: state.facilities.map(f=>({id:+f.id,name:f.name,capacity:+f.capacity,type:f.type})),
+            courses: state.courses.map(toCourse),
+            instructors: state.instructors.map(toInstructor),
+            studentGroups: state.studentGroups.map(toGroup),
+            sessions
+        };
+    }
+    function byId(arr){ return Object.fromEntries(arr.map(x=>[+x.id,x])); }
+    function toCourse(c){ return {id:+c.id,name:c.name,weeklySessions:+c.weeklySessions,duration:+c.duration,requiredFacilityType:c.requiredFacilityType}; }
+    function toInstructor(i){ return {id:+i.id,name:i.name,skill:i.skill}; }
+    function toGroup(g){ return {id:+g.id,name:g.name,size:+g.size}; }
+    function guessDateFromDay(day){ // fallback when importing old files
+        const map={MONDAY:1,TUESDAY:2,WEDNESDAY:3,THURSDAY:4,FRIDAY:5,SATURDAY:6,SUNDAY:0};
+        const now=new Date(); const today=now.getDay(); const target=map[(day||'').toUpperCase()] ?? 1;
+        const diff=(target - today + 7) % 7; const d=new Date(now); d.setDate(now.getDate()+diff);
+        return d.toISOString().slice(0,10);
+    }
+
+    // Solve flow
+    const solveBtn=document.getElementById('solveBtn'), stopBtn=document.getElementById('stopBtn'), statusEl=document.getElementById('appStatus'), scoreEl=document.getElementById('score');
+    let clientTimeslotIndex = {}; // timeslotId -> date (from the form)
+
+    solveBtn.onclick=startSolve; stopBtn.onclick=terminate;
+    function setStatus(text,cls='muted'){ statusEl.textContent=text; statusEl.className=`pill mono status ${cls}`; }
+
+    async function startSolve(){
+        clearInterval(pollTimer); scoreEl.textContent='—'; lastResultSessions=[];
+        setStatus('Starting…'); stopBtn.disabled=true;
+
+        const payload=buildRequest(); document.getElementById('reqPreview').textContent=JSON.stringify(payload,null,2);
+
+        try{
+            const r=await fetch('/api/planning/solve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+            if(!r.ok) throw new Error(await r.text());
+            const {jobId}=await r.json(); currentJobId=jobId; stopBtn.disabled=false; setStatus('RUNNING'); pollTimer=setInterval(pollStatus,1100); toast('Solve started','ok'); show('request');
+        }catch(e){ toast(`Solve failed: ${e.message}`,'err'); setStatus('FAILED','bad'); }
+    }
+    async function pollStatus(){
+        if(!currentJobId) return;
+        try{
+            const r=await fetch(`/api/planning/status/${currentJobId}`); const d=await r.json();
+            if(d.status==='DONE'){ clearInterval(pollTimer); stopBtn.disabled=true; setStatus('DONE','ok'); await loadResult(); }
+            else if(d.status==='FAILED' || d.status==='NOT_FOUND'){ clearInterval(pollTimer); stopBtn.disabled=true; setStatus(d.status,'bad'); toast('Job failed','err'); }
+            else setStatus('RUNNING');
+        }catch{ clearInterval(pollTimer); setStatus('FAILED','bad'); }
+    }
+    async function loadResult(){
+        try{
+            const r=await fetch(`/api/planning/result/${currentJobId}`); if(!r.ok){ toast(`Result error: ${r.status}`,'err'); return; }
+            const data=await r.json(); scoreEl.textContent=data.score||'n/a';
+            lastResultSessions=data.sessions||[]; renderResultsTable(lastResultSessions); drawCalendar(lastResultSessions); show('calendar'); toast('Solution ready','ok');
+        }catch(e){ toast(`Result failed: ${e.message}`,'err'); }
+    }
+    async function terminate(){ if(!currentJobId) return; try{ await fetch(`/api/planning/terminate/${currentJobId}`,{method:'POST'});}finally{ clearInterval(pollTimer); stopBtn.disabled=true; setStatus('CANCELED'); toast('Terminated','ok'); } }
+
+    // Results table
+    function renderResultsTable(sessions){
+        if(!sessions.length){ document.getElementById('resultsTable').innerHTML='<p class="muted">No sessions.</p>'; return; }
+        const rows=sessions.map(s=>`
+        <tr>
+          <td>${s.course?.name??'-'}</td>
+          <td>${s.instructor?.name??'-'}</td>
+          <td>${s.studentGroup?.name??'-'}</td>
+          <td>${s.timeslot? `${s.timeslot.dayOfWeek} ${s.timeslot.startTime}–${s.timeslot.endTime}`:'-'}</td>
+          <td>${s.facility?.name??'-'}</td>
+        </tr>`).join('');
+        document.getElementById('resultsTable').innerHTML=`
+        <table>
+          <thead><tr><th>Course</th><th>Instructor</th><th>Group</th><th>Timeslot</th><th>Facility</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    // Calendar uses exact date from clientTimeslotIndex, falling back if missing
+    function drawCalendar(sessions){
+        const el=document.getElementById('calendar');
+        const events=(sessions||[]).filter(s=>s.timeslot && s.facility).map(s=>{
+            const date = clientTimeslotIndex?.[String(s.timeslot.id)] || dayToIsoThisWeek(s.timeslot.dayOfWeek);
+            return {
+                id:String(s.id),
+                title:`${s.course?.name||''}\n${s.facility?.name||''}`,
+                start:`${date}T${(s.timeslot?.startTime||'08:00')}:00`,
+                end:`${date}T${(s.timeslot?.endTime||'10:00')}:00`
+            };
+        });
+        if(!calendar){
+            calendar = new FullCalendar.Calendar(el, {
+                initialView: 'timeGridWeek',
+                slotMinTime: '08:00:00',
+                slotMaxTime: '20:00:00',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                height: 'auto',
+                events,
+                // classic green look
+                eventColor: '#c4d79b',       // background + border
+                eventTextColor: '#1f2937'    // dark text
+            }); calendar.render();
+        }else{ calendar.removeAllEvents(); events.forEach(ev=>calendar.addEvent(ev)); }
+    }
+    function dayToIsoThisWeek(day){
+        const map={MONDAY:1,TUESDAY:2,WEDNESDAY:3,THURSDAY:4,FRIDAY:5,SATURDAY:6,SUNDAY:0};
+        const target=map[(day||'MONDAY').toUpperCase()]??1; const now=new Date(); const cur=(now.getDay()+6)%7; const diff=target-cur; const d=new Date(now); d.setDate(now.getDate()+diff); return d.toISOString().slice(0,10);
+    }
+
+    // Initial data & UI
+    document.getElementById('seedBtn').onclick=seedDemo;
+    function seedDemo(){
+        // two real dates to match your screenshot vibe
+        const base = new Date(); const nextMon = new Date(base); nextMon.setDate(base.getDate() + ((8 - base.getDay()) % 7)); // next Monday
+        const nextWed = new Date(nextMon); nextWed.setDate(nextMon.getDate()+2);
+        state.timeslots=[
+            {id:1, date:nextMon.toISOString().slice(0,10), startTime:'08:00', endTime:'10:00'},
+            {id:2, date:nextMon.toISOString().slice(0,10), startTime:'10:15', endTime:'12:15'},
+            {id:3, date:nextWed.toISOString().slice(0,10), startTime:'08:00', endTime:'10:00'}
+        ];
+        state.facilities=[{id:1,name:'Amphi 1_Gouges_100',capacity:100,type:'CLASSROOM'},{id:2,name:'234C_Halle (84p)',capacity:84,type:'CLASSROOM'}];
+        state.courses=[{id:1,name:"L'Entreprise CM01",weeklySessions:2,duration:120,requiredFacilityType:'CLASSROOM'},{id:2,name:"Ethique de l'ingenieur CM01",weeklySessions:1,duration:120,requiredFacilityType:'CLASSROOM'}];
+        state.instructors=[{id:1,name:'Dr. Smith',skill:'Management'},{id:2,name:'Pr. Dupont',skill:'Ethics'}];
+        state.studentGroups=[{id:1,name:'EIDD – 3A',size:90}];
+        state.sessions=[{id:1,courseId:1,instructorId:1,studentGroupId:1},{id:2,courseId:1,instructorId:1,studentGroupId:1},{id:3,courseId:2,instructorId:2,studentGroupId:1}];
+        renderTables(); toast('Demo seeded with exact dates','ok');
+    }
+
+    // helpers
+    renderTables(); seedDemo();
+    setStatus('Idle');
+
+</script>
+</body>
+</html>
